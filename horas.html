@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nómina Flexible - Local</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-gray-100 p-8">
+
+    <div class="max-w-7xl mx-auto bg-white p-6 shadow-lg rounded-lg">
+        
+        <div class="border-b pb-4 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Control de Nómina</h1>
+                <p class="text-gray-500 text-sm">Horario: 07:00 - 12:00 y 01:00 - 04:00 (Almuerzo 1h)</p>
+            </div>
+            <div class="text-right flex flex-col items-end gap-1">
+                <div class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-xs font-bold border border-yellow-200">
+                    Almuerzo: 12:00 PM - 01:00 PM
+                </div>
+                <div class="bg-red-100 text-red-800 px-3 py-1 rounded text-xs font-bold border border-red-200">
+                    Descuentos: Prop. al Sueldo
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6 bg-blue-50 p-4 rounded border border-blue-200 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+                <label class="block text-gray-700 font-bold mb-2">Nombre del Trabajador:</label>
+                <input type="text" id="inputNombre" class="w-full border border-gray-300 p-2 rounded text-lg uppercase focus:ring focus:ring-blue-300" placeholder="Ej: JUAN PÉREZ">
+            </div>
+            <div>
+                <label class="block text-gray-700 font-bold mb-2">Pago Hora Extra ($):</label>
+                <input type="number" id="inputTarifaExtra" class="w-full border border-gray-300 p-2 rounded text-lg font-bold text-green-700 focus:ring focus:ring-green-300" value="3.00" step="0.50">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6 items-end bg-gray-50 p-4 rounded border">
+            <div class="col-span-1 md:col-span-2">
+                <label class="block text-xs font-bold mb-1">Fecha (Día/Mes/Año)</label>
+                <input type="date" id="inputFecha" class="w-full border p-2 rounded">
+            </div>
+            <div>
+                <label class="block text-xs font-bold mb-1">Entrada</label>
+                <input type="time" id="inputEntrada" class="w-full border p-2 rounded" value="07:00">
+            </div>
+            <div>
+                <label class="block text-xs font-bold mb-1">Salida</label>
+                <input type="time" id="inputSalida" class="w-full border p-2 rounded" value="16:00">
+            </div>
+            <div>
+                <label class="block text-xs font-bold mb-1">Sueldo Diario ($)</label>
+                <input type="number" id="inputSueldo" class="w-full border p-2 rounded" placeholder="20" value="20">
+            </div>
+            <div>
+                <button type="button" onclick="agregarFila()" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 font-bold shadow cursor-pointer transition transform active:scale-95">
+                    + Calcular
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto mb-6 border rounded-lg shadow-sm">
+            <table class="w-full text-sm text-left text-gray-700">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-200">
+                    <tr>
+                        <th class="px-2 py-3">Día / Fecha</th>
+                        <th class="px-2 py-3">Entrada</th>
+                        <th class="px-2 py-3">Salida</th>
+                        <th class="px-2 py-3">Base</th>
+                        <th class="px-2 py-3 text-red-600">Perdido</th>
+                        <th class="px-2 py-3 text-red-600">Desc.</th>
+                        <th class="px-2 py-3 text-blue-600">Extra</th>
+                        <th class="px-2 py-3 text-green-600">$$ Extra</th>
+                        <th class="px-2 py-3 font-bold bg-gray-100">Total</th>
+                        <th class="px-2 py-3 text-center">X</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoTabla" class="divide-y divide-gray-200"></tbody>
+                <tfoot class="bg-gray-100 font-bold border-t-2 border-gray-300">
+                    <tr>
+                        <td colspan="8" class="px-4 py-3 text-right text-gray-600">TOTAL NETO A PAGAR:</td>
+                        <td colspan="2" class="px-4 py-3 text-xl text-blue-800" id="granTotal">$0.00</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="text-right">
+            <button type="button" onclick="generarPDF()" class="bg-red-600 text-white px-6 py-3 rounded shadow hover:bg-red-700 font-bold inline-flex items-center gap-2 cursor-pointer transition transform hover:scale-105">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Descargar Reporte PDF
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let registros = [];
+        
+        // --- CONSTANTES DE TIEMPO (Minutos) ---
+        const AM_INICIO = 7 * 60;   // 07:00 AM (420)
+        const AM_FIN    = 12 * 60;  // 12:00 PM (720)
+        const PM_INICIO = 13 * 60;  // 01:00 PM (780)
+        const PM_FIN    = 16 * 60;  // 04:00 PM (960)
+
+        // --- UTILIDADES ---
+        
+        function timeToMinutes(timeStr) {
+            if(!timeStr) return 0;
+            const [h, m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        function minutesTo12Hour(minutes) {
+            let h = Math.floor(minutes / 60);
+            let m = minutes % 60;
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12;
+            h = h ? h : 12; 
+            const mStr = m < 10 ? '0'+m : m;
+            return `${h}:${mStr} ${ampm}`;
+        }
+
+        function formatDateFull(fechaStr) {
+            const [anio, mes, dia] = fechaStr.split('-');
+            return `${dia}/${mes}/${anio}`;
+        }
+
+        // Calcula minutos dentro de un rango
+        function calcSolapamiento(rangoInicio, rangoFin, zonaInicio, zonaFin) {
+            const inicio = Math.max(rangoInicio, zonaInicio);
+            const fin = Math.min(rangoFin, zonaFin);
+            return Math.max(0, fin - inicio);
+        }
+
+        // --- FUNCIÓN AGREGAR ---
+        function agregarFila() {
+            // Recoger valores
+            const elFecha = document.getElementById('inputFecha').value;
+            const elEntrada = document.getElementById('inputEntrada').value;
+            const elSalida = document.getElementById('inputSalida').value;
+            const sueldoBase = parseFloat(document.getElementById('inputSueldo').value);
+            // Recoger Tarifa Variable
+            const tarifaExtra = parseFloat(document.getElementById('inputTarifaExtra').value);
+
+            if (!elFecha || !elEntrada || !elSalida || isNaN(sueldoBase) || isNaN(tarifaExtra)) {
+                alert("Por favor completa todos los campos correctamente.");
+                return;
+            }
+
+            const minEntrada = timeToMinutes(elEntrada);
+            const minSalida = timeToMinutes(elSalida);
+
+            // 1. CALCULAR EXTRAS (Fuera de 7am-4pm)
+            let extraAM = 0;
+            if (minEntrada < AM_INICIO) extraAM = AM_INICIO - minEntrada;
+            
+            let extraPM = 0;
+            if (minSalida > PM_FIN) extraPM = minSalida - PM_FIN;
+            
+            const totalHorasExtra = (extraAM + extraPM) / 60;
+            
+            // Usamos la tarifa dinámica del input
+            const pagoExtra = totalHorasExtra * tarifaExtra;
+
+            // 2. CALCULAR DESCUENTOS (Dentro de horario laboral, excluyendo almuerzo)
+            let minutosPerdidos = 0;
+
+            if (minEntrada > AM_INICIO) {
+                minutosPerdidos += calcSolapamiento(AM_INICIO, minEntrada, AM_INICIO, AM_FIN);
+                minutosPerdidos += calcSolapamiento(AM_INICIO, minEntrada, PM_INICIO, PM_FIN);
+            }
+
+            if (minSalida < PM_FIN) {
+                minutosPerdidos += calcSolapamiento(minSalida, PM_FIN, PM_INICIO, PM_FIN);
+                minutosPerdidos += calcSolapamiento(minSalida, PM_FIN, AM_INICIO, AM_FIN);
+            }
+
+            const totalHorasPerdidas = minutosPerdidos / 60;
+            const precioHoraNormal = sueldoBase / 8; 
+            const dineroDescontado = totalHorasPerdidas * precioHoraNormal;
+
+            // 3. TOTAL
+            const totalDia = sueldoBase - dineroDescontado + pagoExtra;
+
+            // 4. Nombre del día
+            const [anio, mes, dia] = elFecha.split('-').map(Number);
+            const fechaObj = new Date(anio, mes - 1, dia);
+            const diasArr = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+            const nombreDia = diasArr[fechaObj.getDay()];
+
+            registros.push({
+                id: Date.now(),
+                nombreDia,
+                fechaRaw: elFecha,
+                fechaFmt: formatDateFull(elFecha),
+                entrada12: minutesTo12Hour(minEntrada),
+                salida12: minutesTo12Hour(minSalida),
+                sueldoBase,
+                tarifaAplicada: tarifaExtra, // Guardamos qué tarifa se usó
+                horasPerdidas: totalHorasPerdidas.toFixed(2),
+                dineroDescontado,
+                horasExtra: totalHorasExtra.toFixed(2),
+                pagoExtra,
+                total: totalDia
+            });
+
+            renderizarTabla();
+        }
+
+        function eliminarFila(id) {
+            registros = registros.filter(r => r.id !== id);
+            renderizarTabla();
+        }
+
+        function renderizarTabla() {
+            const tbody = document.getElementById('cuerpoTabla');
+            tbody.innerHTML = '';
+            let sumaTotal = 0;
+
+            registros.sort((a, b) => new Date(a.fechaRaw) - new Date(b.fechaRaw));
+
+            registros.forEach(r => {
+                sumaTotal += r.total;
+                
+                const styleDesc = r.dineroDescontado > 0 ? "text-red-600 font-bold" : "text-gray-400";
+                const txtDesc = r.dineroDescontado > 0 ? `-$${r.dineroDescontado.toFixed(2)}` : "-";
+                
+                const styleExtra = r.pagoExtra > 0 ? "text-green-600 font-bold" : "text-gray-400";
+                const txtExtra = r.pagoExtra > 0 ? `+$${r.pagoExtra.toFixed(2)}` : "-";
+
+                const tr = document.createElement('tr');
+                tr.className = "bg-white border-b hover:bg-gray-50";
+                tr.innerHTML = `
+                    <td class="px-2 py-2">
+                        <div class="font-bold text-gray-800">${r.nombreDia}</div>
+                        <div class="text-xs text-gray-500">${r.fechaFmt}</div>
+                    </td>
+                    <td class="px-2 py-2 text-xs md:text-sm">${r.entrada12}</td>
+                    <td class="px-2 py-2 text-xs md:text-sm">${r.salida12}</td>
+                    <td class="px-2 py-2 text-gray-600">$${r.sueldoBase.toFixed(2)}</td>
+                    <td class="px-2 py-2 text-xs text-red-400">${r.horasPerdidas > 0 ? r.horasPerdidas+'h' : '-'}</td>
+                    <td class="px-2 py-2 ${styleDesc}">${txtDesc}</td>
+                    <td class="px-2 py-2 text-xs text-blue-500">${r.horasExtra > 0 ? r.horasExtra+'h' : '-'}</td>
+                    <td class="px-2 py-2 ${styleExtra}">${txtExtra}</td>
+                    <td class="px-2 py-2 font-bold bg-gray-50 text-gray-900 border-l">$${r.total.toFixed(2)}</td>
+                    <td class="px-2 py-2 text-center">
+                        <button onclick="eliminarFila(${r.id})" class="text-red-500 font-bold px-2 hover:bg-red-100 rounded">X</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('granTotal').innerText = `$${sumaTotal.toFixed(2)}`;
+        }
+
+        async function generarPDF() {
+            if (registros.length === 0) { alert("No hay datos para generar PDF"); return; }
+            
+            const nombre = document.getElementById('inputNombre').value || "TRABAJADOR";
+            const tarifaActual = document.getElementById('inputTarifaExtra').value; // Valor visual actual
+            const fechaGeneracion = new Date().toLocaleString('es-ES');
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+
+            doc.setFontSize(16);
+            doc.text("REPORTE DE HORAS TRABAJADAS", 14, 15);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Generado el: ${fechaGeneracion}`, 280, 15, { align: 'right' });
+
+            doc.setTextColor(0);
+            doc.text(`Trabajador: ${nombre.toUpperCase()}`, 14, 25);
+            doc.text(`Horario: 07:00-12:00 / 01:00-04:00 | Tarifa Extra Aplicada: $${tarifaActual}/h`, 14, 30);
+
+            const headers = [["Día / Fecha", "Entrada", "Salida", "Base", "H.Perd", "Desc.", "H.Ext", "$ Extra", "TOTAL"]];
+            
+            const data = registros.map(r => [
+                `${r.nombreDia}\n${r.fechaFmt}`,
+                r.entrada12,
+                r.salida12,
+                `$${r.sueldoBase.toFixed(2)}`,
+                r.horasPerdidas > 0 ? `${r.horasPerdidas}h` : "-",
+                r.dineroDescontado > 0 ? `-$${r.dineroDescontado.toFixed(2)}` : "-",
+                r.horasExtra > 0 ? `${r.horasExtra}h` : "-",
+                `$${r.pagoExtra.toFixed(2)}`,
+                `$${r.total.toFixed(2)}`
+            ]);
+
+            const sumBase = registros.reduce((a, b) => a + b.sueldoBase, 0);
+            const sumDesc = registros.reduce((a, b) => a + b.dineroDescontado, 0);
+            const sumExtr = registros.reduce((a, b) => a + b.pagoExtra, 0);
+            const sumTot  = registros.reduce((a, b) => a + b.total, 0);
+
+            data.push([
+                "TOTALES", "", "", 
+                `$${sumBase.toFixed(2)}`, 
+                "", 
+                `-$${sumDesc.toFixed(2)}`, 
+                "", 
+                `+$${sumExtr.toFixed(2)}`, 
+                `$${sumTot.toFixed(2)}`
+            ]);
+
+            doc.autoTable({
+                head: headers,
+                body: data,
+                startY: 35,
+                theme: 'striped',
+                styles: { fontSize: 10, cellPadding: 3, valign: 'middle', halign: 'center' },
+                columnStyles: {
+                    0: { halign: 'left', fontStyle: 'bold' },
+                    5: { textColor: [200, 0, 0] },
+                    7: { textColor: [0, 100, 0] },
+                    8: { fontStyle: 'bold', fillColor: [240, 240, 240] }
+                },
+                didParseCell: function (data) {
+                    if (data.row.index === registros.length) {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.fillColor = [50, 50, 50];
+                        data.cell.styles.textColor = [255, 255, 255];
+                    }
+                }
+            });
+
+            // FIRMA
+            let finalY = doc.lastAutoTable.finalY + 35;
+            if (finalY > 180) { 
+                doc.addPage();
+                finalY = 50;
+            }
+            const pageWidth = doc.internal.pageSize.getWidth();
+            doc.setLineWidth(0.5);
+            doc.line(pageWidth / 2 - 40, finalY, pageWidth / 2 + 40, finalY);
+            
+            doc.setFontSize(11);
+            doc.setTextColor(0);
+            doc.text(nombre.toUpperCase(), pageWidth / 2, finalY + 6, { align: 'center' });
+            doc.text("Firma del Trabajador", pageWidth / 2, finalY + 12, { align: 'center' });
+
+            doc.save(`Nomina_${nombre.replace(/\s+/g, '_')}.pdf`);
+        }
+
+        document.getElementById('inputFecha').valueAsDate = new Date();
+    </script>
+</body>
+</html>
