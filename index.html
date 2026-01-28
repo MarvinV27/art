@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nómina Flexible - Local</title>
+    <title>Nómina Final - Sábados Mediodía</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
@@ -15,14 +15,14 @@
         <div class="border-b pb-4 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-gray-800">Control de Nómina</h1>
-                <p class="text-gray-500 text-sm">Horario: 07:00 - 12:00 y 01:00 - 04:00 (Almuerzo 1h)</p>
+                <p class="text-gray-500 text-sm">Lunes-Viernes (7-4) | <span class="text-blue-600 font-bold">Sábados (7-12)</span></p>
             </div>
             <div class="text-right flex flex-col items-end gap-1">
                 <div class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-xs font-bold border border-yellow-200">
-                    Almuerzo: 12:00 PM - 01:00 PM
+                    Almuerzo (L-V): 12:00 - 01:00
                 </div>
-                <div class="bg-red-100 text-red-800 px-3 py-1 rounded text-xs font-bold border border-red-200">
-                    Descuentos: Prop. al Sueldo
+                <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded text-xs font-bold border border-blue-200">
+                    Sábados: Salida 12:00 PM
                 </div>
             </div>
         </div>
@@ -30,18 +30,18 @@
         <div class="mb-6 bg-blue-50 p-4 rounded border border-blue-200 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="md:col-span-2">
                 <label class="block text-gray-700 font-bold mb-2">Nombre del Trabajador:</label>
-                <input type="text" id="inputNombre" class="w-full border border-gray-300 p-2 rounded text-lg uppercase focus:ring focus:ring-blue-300" placeholder="Ej: JUAN PÉREZ">
+                <input type="text" id="inputNombre" class="w-full border border-gray-300 p-2 rounded text-lg uppercase" placeholder="Ej: JUAN PÉREZ">
             </div>
             <div>
                 <label class="block text-gray-700 font-bold mb-2">Pago Hora Extra ($):</label>
-                <input type="number" id="inputTarifaExtra" class="w-full border border-gray-300 p-2 rounded text-lg font-bold text-green-700 focus:ring focus:ring-green-300" value="3.00" step="0.50">
+                <input type="number" id="inputTarifaExtra" class="w-full border border-gray-300 p-2 rounded text-lg font-bold text-green-700" value="3.00" step="0.50">
             </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6 items-end bg-gray-50 p-4 rounded border">
             <div class="col-span-1 md:col-span-2">
                 <label class="block text-xs font-bold mb-1">Fecha (Día/Mes/Año)</label>
-                <input type="date" id="inputFecha" class="w-full border p-2 rounded">
+                <input type="date" id="inputFecha" class="w-full border p-2 rounded" onchange="detectarSabado()">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1">Entrada</label>
@@ -61,12 +61,15 @@
                 </button>
             </div>
         </div>
+        <div id="avisoSabado" class="hidden mb-4 text-blue-600 text-sm font-bold text-center bg-blue-50 p-2 rounded">
+            📅 Fecha detectada como SÁBADO: Horario ajustado a 7:00 AM - 12:00 PM
+        </div>
 
         <div class="overflow-x-auto mb-6 border rounded-lg shadow-sm">
             <table class="w-full text-sm text-left text-gray-700">
                 <thead class="text-xs text-gray-700 uppercase bg-gray-200">
                     <tr>
-                        <th class="px-2 py-3">Día / Fecha</th>
+                        <th class="px-2 py-3">Día</th>
                         <th class="px-2 py-3">Entrada</th>
                         <th class="px-2 py-3">Salida</th>
                         <th class="px-2 py-3">Base</th>
@@ -89,7 +92,7 @@
         </div>
 
         <div class="text-right">
-            <button type="button" onclick="generarPDF()" class="bg-red-600 text-white px-6 py-3 rounded shadow hover:bg-red-700 font-bold inline-flex items-center gap-2 cursor-pointer transition transform hover:scale-105">
+            <button type="button" onclick="generarPDF()" class="bg-red-600 text-white px-6 py-3 rounded shadow hover:bg-red-700 font-bold inline-flex items-center gap-2 cursor-pointer transition hover:scale-105">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 Descargar Reporte PDF
             </button>
@@ -99,14 +102,15 @@
     <script>
         let registros = [];
         
-        // --- CONSTANTES DE TIEMPO (Minutos) ---
-        const AM_INICIO = 7 * 60;   // 07:00 AM (420)
-        const AM_FIN    = 12 * 60;  // 12:00 PM (720)
-        const PM_INICIO = 13 * 60;  // 01:00 PM (780)
-        const PM_FIN    = 16 * 60;  // 04:00 PM (960)
+        // --- CONSTANTES GLOBALES (Minutos) ---
+        const AM_INICIO = 7 * 60;   // 07:00 (420)
+        const AM_FIN    = 12 * 60;  // 12:00 (720)
+        
+        // L-V
+        const PM_INICIO = 13 * 60;  // 01:00 (780)
+        const PM_FIN    = 16 * 60;  // 04:00 (960)
 
         // --- UTILIDADES ---
-        
         function timeToMinutes(timeStr) {
             if(!timeStr) return 0;
             const [h, m] = timeStr.split(':').map(Number);
@@ -128,68 +132,129 @@
             return `${dia}/${mes}/${anio}`;
         }
 
-        // Calcula minutos dentro de un rango
         function calcSolapamiento(rangoInicio, rangoFin, zonaInicio, zonaFin) {
             const inicio = Math.max(rangoInicio, zonaInicio);
             const fin = Math.min(rangoFin, zonaFin);
             return Math.max(0, fin - inicio);
         }
 
-        // --- FUNCIÓN AGREGAR ---
+        // --- DETECTAR SÁBADO ---
+        function detectarSabado() {
+            const fechaVal = document.getElementById('inputFecha').value;
+            if(!fechaVal) return;
+            const [a,m,d] = fechaVal.split('-').map(Number);
+            const fecha = new Date(a, m-1, d);
+            const esSabado = (fecha.getDay() === 6);
+            
+            const aviso = document.getElementById('avisoSabado');
+            if(esSabado) {
+                aviso.classList.remove('hidden');
+                document.getElementById('inputSalida').value = "12:00"; // Sugerir salida 12:00
+            } else {
+                aviso.classList.add('hidden');
+                document.getElementById('inputSalida').value = "16:00"; // Sugerir salida 16:00
+            }
+        }
+
+        // --- LÓGICA PRINCIPAL ---
         function agregarFila() {
-            // Recoger valores
             const elFecha = document.getElementById('inputFecha').value;
             const elEntrada = document.getElementById('inputEntrada').value;
             const elSalida = document.getElementById('inputSalida').value;
             const sueldoBase = parseFloat(document.getElementById('inputSueldo').value);
-            // Recoger Tarifa Variable
             const tarifaExtra = parseFloat(document.getElementById('inputTarifaExtra').value);
 
             if (!elFecha || !elEntrada || !elSalida || isNaN(sueldoBase) || isNaN(tarifaExtra)) {
-                alert("Por favor completa todos los campos correctamente.");
+                alert("Por favor completa los campos.");
                 return;
             }
+
+            // 1. Determinar si es Sábado
+            const [a,m,d] = elFecha.split('-').map(Number);
+            const fechaObj = new Date(a, m-1, d);
+            const diasArr = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+            const nombreDia = diasArr[fechaObj.getDay()];
+            const esSabado = (fechaObj.getDay() === 6);
 
             const minEntrada = timeToMinutes(elEntrada);
             const minSalida = timeToMinutes(elSalida);
 
-            // 1. CALCULAR EXTRAS (Fuera de 7am-4pm)
-            let extraAM = 0;
-            if (minEntrada < AM_INICIO) extraAM = AM_INICIO - minEntrada;
-            
-            let extraPM = 0;
-            if (minSalida > PM_FIN) extraPM = minSalida - PM_FIN;
-            
-            const totalHorasExtra = (extraAM + extraPM) / 60;
-            
-            // Usamos la tarifa dinámica del input
+            let totalHorasExtra = 0;
+            let totalHorasPerdidas = 0;
+            let precioHoraNormal = 0;
+
+            // --- LÓGICA DIFERENCIADA ---
+            if (esSabado) {
+                // === LÓGICA SÁBADO (7am - 12pm) ===
+                const SABADO_FIN = 12 * 60; // 12:00 PM
+                const HORAS_JORNADA_SABADO = 5; // De 7 a 12 son 5 horas
+
+                // A. Extras Sábado
+                // Antes de las 7am
+                let extraAM = 0;
+                if (minEntrada < AM_INICIO) extraAM = AM_INICIO - minEntrada;
+                
+                // Después de las 12pm
+                let extraPM = 0;
+                if (minSalida > SABADO_FIN) extraPM = minSalida - SABADO_FIN;
+                
+                totalHorasExtra = (extraAM + extraPM) / 60;
+
+                // B. Descuentos Sábado (Huecos entre 7am y 12pm)
+                // Se descuenta si llega tarde o se va antes de las 12
+                let minutosPerdidos = 0;
+                
+                // Llegada tardía
+                if (minEntrada > AM_INICIO) {
+                    minutosPerdidos += calcSolapamiento(AM_INICIO, minEntrada, AM_INICIO, SABADO_FIN);
+                }
+                // Salida anticipada
+                if (minSalida < SABADO_FIN) {
+                    minutosPerdidos += calcSolapamiento(minSalida, SABADO_FIN, AM_INICIO, SABADO_FIN);
+                }
+
+                totalHorasPerdidas = minutosPerdidos / 60;
+                
+                // PRECIO HORA SÁBADO: SueldoBase / 5
+                // (Porque ganan el día completo trabajando solo 5 horas)
+                precioHoraNormal = sueldoBase / HORAS_JORNADA_SABADO;
+
+            } else {
+                // === LÓGICA LUNES-VIERNES (7-12, 1-4) ===
+                const HORAS_JORNADA_LV = 8;
+
+                // A. Extras L-V
+                let extraAM = 0;
+                if (minEntrada < AM_INICIO) extraAM = AM_INICIO - minEntrada;
+                
+                let extraPM = 0;
+                if (minSalida > PM_FIN) extraPM = minSalida - PM_FIN;
+                
+                totalHorasExtra = (extraAM + extraPM) / 60;
+
+                // B. Descuentos L-V (Excluye almuerzo 12-1)
+                let minutosPerdidos = 0;
+
+                if (minEntrada > AM_INICIO) {
+                    minutosPerdidos += calcSolapamiento(AM_INICIO, minEntrada, AM_INICIO, AM_FIN);
+                    minutosPerdidos += calcSolapamiento(AM_INICIO, minEntrada, PM_INICIO, PM_FIN);
+                }
+
+                if (minSalida < PM_FIN) {
+                    minutosPerdidos += calcSolapamiento(minSalida, PM_FIN, PM_INICIO, PM_FIN);
+                    minutosPerdidos += calcSolapamiento(minSalida, PM_FIN, AM_INICIO, AM_FIN);
+                }
+
+                totalHorasPerdidas = minutosPerdidos / 60;
+                
+                // PRECIO HORA L-V: SueldoBase / 8
+                precioHoraNormal = sueldoBase / HORAS_JORNADA_LV;
+            }
+
+            // --- CÁLCULOS FINALES ---
             const pagoExtra = totalHorasExtra * tarifaExtra;
-
-            // 2. CALCULAR DESCUENTOS (Dentro de horario laboral, excluyendo almuerzo)
-            let minutosPerdidos = 0;
-
-            if (minEntrada > AM_INICIO) {
-                minutosPerdidos += calcSolapamiento(AM_INICIO, minEntrada, AM_INICIO, AM_FIN);
-                minutosPerdidos += calcSolapamiento(AM_INICIO, minEntrada, PM_INICIO, PM_FIN);
-            }
-
-            if (minSalida < PM_FIN) {
-                minutosPerdidos += calcSolapamiento(minSalida, PM_FIN, PM_INICIO, PM_FIN);
-                minutosPerdidos += calcSolapamiento(minSalida, PM_FIN, AM_INICIO, AM_FIN);
-            }
-
-            const totalHorasPerdidas = minutosPerdidos / 60;
-            const precioHoraNormal = sueldoBase / 8; 
             const dineroDescontado = totalHorasPerdidas * precioHoraNormal;
-
-            // 3. TOTAL
             const totalDia = sueldoBase - dineroDescontado + pagoExtra;
-
-            // 4. Nombre del día
-            const [anio, mes, dia] = elFecha.split('-').map(Number);
-            const fechaObj = new Date(anio, mes - 1, dia);
-            const diasArr = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-            const nombreDia = diasArr[fechaObj.getDay()];
 
             registros.push({
                 id: Date.now(),
@@ -199,7 +264,6 @@
                 entrada12: minutesTo12Hour(minEntrada),
                 salida12: minutesTo12Hour(minSalida),
                 sueldoBase,
-                tarifaAplicada: tarifaExtra, // Guardamos qué tarifa se usó
                 horasPerdidas: totalHorasPerdidas.toFixed(2),
                 dineroDescontado,
                 horasExtra: totalHorasExtra.toFixed(2),
@@ -231,8 +295,12 @@
                 const styleExtra = r.pagoExtra > 0 ? "text-green-600 font-bold" : "text-gray-400";
                 const txtExtra = r.pagoExtra > 0 ? `+$${r.pagoExtra.toFixed(2)}` : "-";
 
+                // Resaltar si es Sábado
+                const esSab = r.nombreDia === "Sábado";
+                const rowClass = esSab ? "bg-blue-50 border-b hover:bg-blue-100" : "bg-white border-b hover:bg-gray-50";
+
                 const tr = document.createElement('tr');
-                tr.className = "bg-white border-b hover:bg-gray-50";
+                tr.className = rowClass;
                 tr.innerHTML = `
                     <td class="px-2 py-2">
                         <div class="font-bold text-gray-800">${r.nombreDia}</div>
@@ -245,9 +313,9 @@
                     <td class="px-2 py-2 ${styleDesc}">${txtDesc}</td>
                     <td class="px-2 py-2 text-xs text-blue-500">${r.horasExtra > 0 ? r.horasExtra+'h' : '-'}</td>
                     <td class="px-2 py-2 ${styleExtra}">${txtExtra}</td>
-                    <td class="px-2 py-2 font-bold bg-gray-50 text-gray-900 border-l">$${r.total.toFixed(2)}</td>
+                    <td class="px-2 py-2 font-bold text-gray-900 border-l">$${r.total.toFixed(2)}</td>
                     <td class="px-2 py-2 text-center">
-                        <button onclick="eliminarFila(${r.id})" class="text-red-500 font-bold px-2 hover:bg-red-100 rounded">X</button>
+                        <button onclick="eliminarFila(${r.id})" class="text-red-500 font-bold px-2 hover:bg-red-200 rounded">X</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -257,10 +325,10 @@
         }
 
         async function generarPDF() {
-            if (registros.length === 0) { alert("No hay datos para generar PDF"); return; }
+            if (registros.length === 0) { alert("No hay datos"); return; }
             
             const nombre = document.getElementById('inputNombre').value || "TRABAJADOR";
-            const tarifaActual = document.getElementById('inputTarifaExtra').value; // Valor visual actual
+            const tarifa = document.getElementById('inputTarifaExtra').value;
             const fechaGeneracion = new Date().toLocaleString('es-ES');
 
             const { jsPDF } = window.jspdf;
@@ -268,14 +336,15 @@
 
             doc.setFontSize(16);
             doc.text("REPORTE DE HORAS TRABAJADAS", 14, 15);
-            
             doc.setFontSize(10);
             doc.setTextColor(100);
             doc.text(`Generado el: ${fechaGeneracion}`, 280, 15, { align: 'right' });
-
+            
             doc.setTextColor(0);
             doc.text(`Trabajador: ${nombre.toUpperCase()}`, 14, 25);
-            doc.text(`Horario: 07:00-12:00 / 01:00-04:00 | Tarifa Extra Aplicada: $${tarifaActual}/h`, 14, 30);
+            doc.text(`Tarifa Extra: $${tarifa}/h`, 14, 30);
+            doc.setFontSize(9);
+            doc.text("Horarios: Lunes-Viernes (7am-4pm) | Sábados (7am-12pm)", 14, 35);
 
             const headers = [["Día / Fecha", "Entrada", "Salida", "Base", "H.Perd", "Desc.", "H.Ext", "$ Extra", "TOTAL"]];
             
@@ -309,7 +378,7 @@
             doc.autoTable({
                 head: headers,
                 body: data,
-                startY: 35,
+                startY: 40,
                 theme: 'striped',
                 styles: { fontSize: 10, cellPadding: 3, valign: 'middle', halign: 'center' },
                 columnStyles: {
@@ -329,10 +398,7 @@
 
             // FIRMA
             let finalY = doc.lastAutoTable.finalY + 35;
-            if (finalY > 180) { 
-                doc.addPage();
-                finalY = 50;
-            }
+            if (finalY > 180) { doc.addPage(); finalY = 50; }
             const pageWidth = doc.internal.pageSize.getWidth();
             doc.setLineWidth(0.5);
             doc.line(pageWidth / 2 - 40, finalY, pageWidth / 2 + 40, finalY);
@@ -344,8 +410,10 @@
 
             doc.save(`Nomina_${nombre.replace(/\s+/g, '_')}.pdf`);
         }
-
+        
+        // Inicializar
         document.getElementById('inputFecha').valueAsDate = new Date();
+        detectarSabado(); // Chequear fecha inicial
     </script>
 </body>
 </html>
