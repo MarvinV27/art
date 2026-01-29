@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nómina Final - Sábados Mediodía</title>
+    <title>Nómina Final - Compacta</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
@@ -27,20 +27,24 @@
             </div>
         </div>
 
-        <div class="mb-6 bg-blue-50 p-4 rounded border border-blue-200 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="mb-6 bg-blue-50 p-4 rounded border border-blue-200 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div class="md:col-span-2">
                 <label class="block text-gray-700 font-bold mb-2">Nombre del Trabajador:</label>
-                <input type="text" id="inputNombre" class="w-full border border-gray-300 p-2 rounded text-lg uppercase" placeholder="Ej: JUAN PÉREZ">
+                <input type="text" id="inputNombre" class="w-full border border-gray-300 p-2 rounded text-lg uppercase focus:ring focus:ring-blue-300" placeholder="Ej: JUAN PÉREZ">
             </div>
             <div>
                 <label class="block text-gray-700 font-bold mb-2">Pago Hora Extra ($):</label>
                 <input type="number" id="inputTarifaExtra" class="w-full border border-gray-300 p-2 rounded text-lg font-bold text-green-700" value="3.00" step="0.50">
             </div>
+            <div>
+                <label class="block text-gray-700 font-bold mb-2 text-red-600">Adelanto/Anticipo ($):</label>
+                <input type="number" id="inputAdelanto" class="w-full border border-red-300 p-2 rounded text-lg font-bold text-red-600 focus:ring focus:ring-red-300" value="0" min="0" oninput="renderizarTabla()">
+            </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6 items-end bg-gray-50 p-4 rounded border">
             <div class="col-span-1 md:col-span-2">
-                <label class="block text-xs font-bold mb-1">Fecha (Día/Mes/Año)</label>
+                <label class="block text-xs font-bold mb-1">Fecha</label>
                 <input type="date" id="inputFecha" class="w-full border p-2 rounded" onchange="detectarSabado()">
             </div>
             <div>
@@ -57,12 +61,13 @@
             </div>
             <div>
                 <button type="button" onclick="agregarFila()" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 font-bold shadow cursor-pointer transition transform active:scale-95">
-                    + Calcular
+                    + Agregar
                 </button>
             </div>
         </div>
-        <div id="avisoSabado" class="hidden mb-4 text-blue-600 text-sm font-bold text-center bg-blue-50 p-2 rounded">
-            📅 Fecha detectada como SÁBADO: Horario ajustado a 7:00 AM - 12:00 PM
+        
+        <div id="avisoSabado" class="hidden mb-4 text-blue-600 text-sm font-bold text-center bg-blue-50 p-2 rounded border border-blue-100">
+            📅 SÁBADO DETECTADO: Salida ajustada a las 12:00 PM
         </div>
 
         <div class="overflow-x-auto mb-6 border rounded-lg shadow-sm">
@@ -75,17 +80,30 @@
                         <th class="px-2 py-3">Base</th>
                         <th class="px-2 py-3 text-red-600">Perdido</th>
                         <th class="px-2 py-3 text-red-600">Desc.</th>
-                        <th class="px-2 py-3 text-blue-600">Extra</th>
+                        <th class="px-2 py-3 text-blue-600">H. Extra</th>
                         <th class="px-2 py-3 text-green-600">$$ Extra</th>
-                        <th class="px-2 py-3 font-bold bg-gray-100">Total</th>
+                        <th class="px-2 py-3 font-bold bg-gray-100">Subtotal</th>
                         <th class="px-2 py-3 text-center">X</th>
                     </tr>
                 </thead>
                 <tbody id="cuerpoTabla" class="divide-y divide-gray-200"></tbody>
-                <tfoot class="bg-gray-100 font-bold border-t-2 border-gray-300">
+                <tfoot class="bg-gray-100 font-bold border-t-2 border-gray-300 text-sm">
                     <tr>
-                        <td colspan="8" class="px-4 py-3 text-right text-gray-600">TOTAL NETO A PAGAR:</td>
-                        <td colspan="2" class="px-4 py-3 text-xl text-blue-800" id="granTotal">$0.00</td>
+                        <td colspan="6" class="px-4 py-2 text-right text-gray-600">SUBTOTAL SEMANA:</td>
+                        <td class="px-2 py-2 text-blue-700 font-extrabold" id="totalHorasExtra">0.00h</td>
+                        <td class="px-2 py-2 text-green-700 font-extrabold" id="totalDineroExtra">$0.00</td>
+                        <td class="px-2 py-2 text-gray-800" id="subtotalSemana">$0.00</td>
+                        <td></td>
+                    </tr>
+                    <tr id="rowAdelanto" class="bg-red-50 text-red-700 hidden">
+                        <td colspan="8" class="px-4 py-2 text-right font-bold">MENOS ADELANTO:</td>
+                        <td class="px-2 py-2 font-bold text-lg" id="displayAdelanto">-$0.00</td>
+                        <td></td>
+                    </tr>
+                    <tr class="bg-gray-200 text-gray-900 border-t border-gray-400">
+                        <td colspan="8" class="px-4 py-3 text-right font-extrabold text-base">TOTAL LÍQUIDO A PAGAR:</td>
+                        <td class="px-2 py-3 font-extrabold text-xl" id="granTotal">$0.00</td>
+                        <td></td>
                     </tr>
                 </tfoot>
             </table>
@@ -94,7 +112,7 @@
         <div class="text-right">
             <button type="button" onclick="generarPDF()" class="bg-red-600 text-white px-6 py-3 rounded shadow hover:bg-red-700 font-bold inline-flex items-center gap-2 cursor-pointer transition hover:scale-105">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                Descargar Reporte PDF
+                Imprimir PDF (Carta)
             </button>
         </div>
     </div>
@@ -102,13 +120,11 @@
     <script>
         let registros = [];
         
-        // --- CONSTANTES GLOBALES (Minutos) ---
-        const AM_INICIO = 7 * 60;   // 07:00 (420)
-        const AM_FIN    = 12 * 60;  // 12:00 (720)
-        
-        // L-V
-        const PM_INICIO = 13 * 60;  // 01:00 (780)
-        const PM_FIN    = 16 * 60;  // 04:00 (960)
+        // --- CONSTANTES ---
+        const AM_INICIO = 7 * 60;   
+        const AM_FIN    = 12 * 60;  
+        const PM_INICIO = 13 * 60;  
+        const PM_FIN    = 16 * 60;  
 
         // --- UTILIDADES ---
         function timeToMinutes(timeStr) {
@@ -138,21 +154,22 @@
             return Math.max(0, fin - inicio);
         }
 
-        // --- DETECTAR SÁBADO ---
         function detectarSabado() {
-            const fechaVal = document.getElementById('inputFecha').value;
-            if(!fechaVal) return;
-            const [a,m,d] = fechaVal.split('-').map(Number);
-            const fecha = new Date(a, m-1, d);
-            const esSabado = (fecha.getDay() === 6);
+            const f = document.getElementById('inputFecha').value;
+            if(!f) return;
+            const [a,m,d] = f.split('-').map(Number);
+            const date = new Date(a, m-1, d);
+            const esSabado = (date.getDay() === 6);
             
             const aviso = document.getElementById('avisoSabado');
+            const salida = document.getElementById('inputSalida');
+            
             if(esSabado) {
                 aviso.classList.remove('hidden');
-                document.getElementById('inputSalida').value = "12:00"; // Sugerir salida 12:00
+                salida.value = "12:00"; 
             } else {
                 aviso.classList.add('hidden');
-                document.getElementById('inputSalida').value = "16:00"; // Sugerir salida 16:00
+                salida.value = "16:00"; 
             }
         }
 
@@ -169,7 +186,6 @@
                 return;
             }
 
-            // 1. Determinar si es Sábado
             const [a,m,d] = elFecha.split('-').map(Number);
             const fechaObj = new Date(a, m-1, d);
             const diasArr = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -183,78 +199,40 @@
             let totalHorasPerdidas = 0;
             let precioHoraNormal = 0;
 
-            // --- LÓGICA DIFERENCIADA ---
             if (esSabado) {
-                // === LÓGICA SÁBADO (7am - 12pm) ===
-                const SABADO_FIN = 12 * 60; // 12:00 PM
-                const HORAS_JORNADA_SABADO = 5; // De 7 a 12 son 5 horas
-
-                // A. Extras Sábado
-                // Antes de las 7am
-                let extraAM = 0;
-                if (minEntrada < AM_INICIO) extraAM = AM_INICIO - minEntrada;
-                
-                // Después de las 12pm
-                let extraPM = 0;
-                if (minSalida > SABADO_FIN) extraPM = minSalida - SABADO_FIN;
-                
+                const SABADO_FIN = 12 * 60; 
+                let extraAM = (minEntrada < AM_INICIO) ? (AM_INICIO - minEntrada) : 0;
+                let extraPM = (minSalida > SABADO_FIN) ? (minSalida - SABADO_FIN) : 0;
                 totalHorasExtra = (extraAM + extraPM) / 60;
 
-                // B. Descuentos Sábado (Huecos entre 7am y 12pm)
-                // Se descuenta si llega tarde o se va antes de las 12
-                let minutosPerdidos = 0;
+                let perdidos = 0;
+                if (minEntrada > AM_INICIO) perdidos += calcSolapamiento(AM_INICIO, minEntrada, AM_INICIO, SABADO_FIN);
+                if (minSalida < SABADO_FIN) perdidos += calcSolapamiento(minSalida, SABADO_FIN, AM_INICIO, SABADO_FIN);
                 
-                // Llegada tardía
-                if (minEntrada > AM_INICIO) {
-                    minutosPerdidos += calcSolapamiento(AM_INICIO, minEntrada, AM_INICIO, SABADO_FIN);
-                }
-                // Salida anticipada
-                if (minSalida < SABADO_FIN) {
-                    minutosPerdidos += calcSolapamiento(minSalida, SABADO_FIN, AM_INICIO, SABADO_FIN);
-                }
-
-                totalHorasPerdidas = minutosPerdidos / 60;
-                
-                // PRECIO HORA SÁBADO: SueldoBase / 5
-                // (Porque ganan el día completo trabajando solo 5 horas)
-                precioHoraNormal = sueldoBase / HORAS_JORNADA_SABADO;
-
+                totalHorasPerdidas = perdidos / 60;
+                precioHoraNormal = sueldoBase / 5; 
             } else {
-                // === LÓGICA LUNES-VIERNES (7-12, 1-4) ===
-                const HORAS_JORNADA_LV = 8;
-
-                // A. Extras L-V
-                let extraAM = 0;
-                if (minEntrada < AM_INICIO) extraAM = AM_INICIO - minEntrada;
-                
-                let extraPM = 0;
-                if (minSalida > PM_FIN) extraPM = minSalida - PM_FIN;
-                
+                let extraAM = (minEntrada < AM_INICIO) ? (AM_INICIO - minEntrada) : 0;
+                let extraPM = (minSalida > PM_FIN) ? (minSalida - PM_FIN) : 0;
                 totalHorasExtra = (extraAM + extraPM) / 60;
 
-                // B. Descuentos L-V (Excluye almuerzo 12-1)
-                let minutosPerdidos = 0;
-
+                let perdidos = 0;
                 if (minEntrada > AM_INICIO) {
-                    minutosPerdidos += calcSolapamiento(AM_INICIO, minEntrada, AM_INICIO, AM_FIN);
-                    minutosPerdidos += calcSolapamiento(AM_INICIO, minEntrada, PM_INICIO, PM_FIN);
+                    perdidos += calcSolapamiento(AM_INICIO, minEntrada, AM_INICIO, AM_FIN);
+                    perdidos += calcSolapamiento(AM_INICIO, minEntrada, PM_INICIO, PM_FIN);
                 }
-
                 if (minSalida < PM_FIN) {
-                    minutosPerdidos += calcSolapamiento(minSalida, PM_FIN, PM_INICIO, PM_FIN);
-                    minutosPerdidos += calcSolapamiento(minSalida, PM_FIN, AM_INICIO, AM_FIN);
+                    perdidos += calcSolapamiento(minSalida, PM_FIN, PM_INICIO, PM_FIN);
+                    perdidos += calcSolapamiento(minSalida, PM_FIN, AM_INICIO, AM_FIN);
                 }
-
-                totalHorasPerdidas = minutosPerdidos / 60;
                 
-                // PRECIO HORA L-V: SueldoBase / 8
-                precioHoraNormal = sueldoBase / HORAS_JORNADA_LV;
+                totalHorasPerdidas = perdidos / 60;
+                precioHoraNormal = sueldoBase / 8;
             }
 
-            // --- CÁLCULOS FINALES ---
             const pagoExtra = totalHorasExtra * tarifaExtra;
             const dineroDescontado = totalHorasPerdidas * precioHoraNormal;
-            const totalDia = sueldoBase - dineroDescontado + pagoExtra;
+            const subtotalDia = sueldoBase - dineroDescontado + pagoExtra;
 
             registros.push({
                 id: Date.now(),
@@ -268,7 +246,7 @@
                 dineroDescontado,
                 horasExtra: totalHorasExtra.toFixed(2),
                 pagoExtra,
-                total: totalDia
+                subtotal: subtotalDia
             });
 
             renderizarTabla();
@@ -282,22 +260,23 @@
         function renderizarTabla() {
             const tbody = document.getElementById('cuerpoTabla');
             tbody.innerHTML = '';
-            let sumaTotal = 0;
+            
+            let sumaSubtotal = 0;
+            let sumHorasExtra = 0;
+            let sumDineroExtra = 0;
 
             registros.sort((a, b) => new Date(a.fechaRaw) - new Date(b.fechaRaw));
 
             registros.forEach(r => {
-                sumaTotal += r.total;
-                
+                sumaSubtotal += r.subtotal;
+                sumHorasExtra += parseFloat(r.horasExtra);
+                sumDineroExtra += r.pagoExtra;
+
                 const styleDesc = r.dineroDescontado > 0 ? "text-red-600 font-bold" : "text-gray-400";
                 const txtDesc = r.dineroDescontado > 0 ? `-$${r.dineroDescontado.toFixed(2)}` : "-";
-                
                 const styleExtra = r.pagoExtra > 0 ? "text-green-600 font-bold" : "text-gray-400";
                 const txtExtra = r.pagoExtra > 0 ? `+$${r.pagoExtra.toFixed(2)}` : "-";
-
-                // Resaltar si es Sábado
-                const esSab = r.nombreDia === "Sábado";
-                const rowClass = esSab ? "bg-blue-50 border-b hover:bg-blue-100" : "bg-white border-b hover:bg-gray-50";
+                const rowClass = (r.nombreDia === "Sábado") ? "bg-blue-50 border-b" : "bg-white border-b";
 
                 const tr = document.createElement('tr');
                 tr.className = rowClass;
@@ -311,9 +290,9 @@
                     <td class="px-2 py-2 text-gray-600">$${r.sueldoBase.toFixed(2)}</td>
                     <td class="px-2 py-2 text-xs text-red-400">${r.horasPerdidas > 0 ? r.horasPerdidas+'h' : '-'}</td>
                     <td class="px-2 py-2 ${styleDesc}">${txtDesc}</td>
-                    <td class="px-2 py-2 text-xs text-blue-500">${r.horasExtra > 0 ? r.horasExtra+'h' : '-'}</td>
+                    <td class="px-2 py-2 text-xs text-blue-600 font-bold">${r.horasExtra > 0 ? r.horasExtra+'h' : '-'}</td>
                     <td class="px-2 py-2 ${styleExtra}">${txtExtra}</td>
-                    <td class="px-2 py-2 font-bold text-gray-900 border-l">$${r.total.toFixed(2)}</td>
+                    <td class="px-2 py-2 font-bold text-gray-900 border-l">$${r.subtotal.toFixed(2)}</td>
                     <td class="px-2 py-2 text-center">
                         <button onclick="eliminarFila(${r.id})" class="text-red-500 font-bold px-2 hover:bg-red-200 rounded">X</button>
                     </td>
@@ -321,7 +300,24 @@
                 tbody.appendChild(tr);
             });
 
-            document.getElementById('granTotal').innerText = `$${sumaTotal.toFixed(2)}`;
+            // CÁLCULOS FINALES
+            const adelanto = parseFloat(document.getElementById('inputAdelanto').value) || 0;
+            const granTotalLiquido = sumaSubtotal - adelanto;
+
+            document.getElementById('subtotalSemana').innerText = `$${sumaSubtotal.toFixed(2)}`;
+            document.getElementById('totalHorasExtra').innerText = `${sumHorasExtra.toFixed(2)}h`;
+            document.getElementById('totalDineroExtra').innerText = `+$${sumDineroExtra.toFixed(2)}`;
+            
+            const rowAdelanto = document.getElementById('rowAdelanto');
+            const displayAdelanto = document.getElementById('displayAdelanto');
+            if (adelanto > 0) {
+                rowAdelanto.classList.remove('hidden');
+                displayAdelanto.innerText = `-$${adelanto.toFixed(2)}`;
+            } else {
+                rowAdelanto.classList.add('hidden');
+            }
+
+            document.getElementById('granTotal').innerText = `$${granTotalLiquido.toFixed(2)}`;
         }
 
         async function generarPDF() {
@@ -329,24 +325,26 @@
             
             const nombre = document.getElementById('inputNombre').value || "TRABAJADOR";
             const tarifa = document.getElementById('inputTarifaExtra').value;
+            const adelanto = parseFloat(document.getElementById('inputAdelanto').value) || 0;
             const fechaGeneracion = new Date().toLocaleString('es-ES');
 
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('l', 'mm', 'a4');
+            // TAMAÑO CARTA (LETTER)
+            const doc = new jsPDF('l', 'mm', 'letter'); // Altura ~216mm
 
-            doc.setFontSize(16);
-            doc.text("REPORTE DE HORAS TRABAJADAS", 14, 15);
-            doc.setFontSize(10);
+            doc.setFontSize(14);
+            doc.text("REPORTE DE TRABAJO", 14, 15);
+            doc.setFontSize(9);
             doc.setTextColor(100);
-            doc.text(`Generado el: ${fechaGeneracion}`, 280, 15, { align: 'right' });
+            doc.text(`Generado: ${fechaGeneracion}`, 260, 15, { align: 'right' });
             
             doc.setTextColor(0);
-            doc.text(`Trabajador: ${nombre.toUpperCase()}`, 14, 25);
-            doc.text(`Tarifa Extra: $${tarifa}/h`, 14, 30);
-            doc.setFontSize(9);
-            doc.text("Horarios: Lunes-Viernes (7am-4pm) | Sábados (7am-12pm)", 14, 35);
+            doc.text(`Trabajador: ${nombre.toUpperCase()}`, 14, 23);
+            doc.text(`Tarifa Extra: $${tarifa}/h`, 14, 27);
+            doc.setFontSize(8);
+            doc.text("Lunes-Viernes (7am-4pm) | Sábados (7am-12pm)", 14, 32);
 
-            const headers = [["Día / Fecha", "Entrada", "Salida", "Base", "H.Perd", "Desc.", "H.Ext", "$ Extra", "TOTAL"]];
+            const headers = [["Día / Fecha", "Entrada", "Salida", "Base", "H.Perd", "Desc.", "H.Ext", "$ Extra", "Subtotal"]];
             
             const data = registros.map(r => [
                 `${r.nombreDia}\n${r.fechaFmt}`,
@@ -357,63 +355,85 @@
                 r.dineroDescontado > 0 ? `-$${r.dineroDescontado.toFixed(2)}` : "-",
                 r.horasExtra > 0 ? `${r.horasExtra}h` : "-",
                 `$${r.pagoExtra.toFixed(2)}`,
-                `$${r.total.toFixed(2)}`
+                `$${r.subtotal.toFixed(2)}`
             ]);
 
+            // TOTALES
             const sumBase = registros.reduce((a, b) => a + b.sueldoBase, 0);
             const sumDesc = registros.reduce((a, b) => a + b.dineroDescontado, 0);
-            const sumExtr = registros.reduce((a, b) => a + b.pagoExtra, 0);
-            const sumTot  = registros.reduce((a, b) => a + b.total, 0);
+            const sumHorasExt = registros.reduce((a, b) => a + parseFloat(b.horasExtra), 0); 
+            const sumDineroExt = registros.reduce((a, b) => a + b.pagoExtra, 0);
+            const sumSubtotal  = registros.reduce((a, b) => a + b.subtotal, 0);
+            const totalLiquido = sumSubtotal - adelanto;
 
             data.push([
-                "TOTALES", "", "", 
+                "SUMA SEMANA", "", "", 
                 `$${sumBase.toFixed(2)}`, 
                 "", 
                 `-$${sumDesc.toFixed(2)}`, 
-                "", 
-                `+$${sumExtr.toFixed(2)}`, 
-                `$${sumTot.toFixed(2)}`
+                `${sumHorasExt.toFixed(2)} h`,
+                `+$${sumDineroExt.toFixed(2)}`, 
+                `$${sumSubtotal.toFixed(2)}`
             ]);
+
+            if (adelanto > 0) {
+                data.push(["MENOS ADELANTO", "", "", "", "", "", "", "", `-$${adelanto.toFixed(2)}`]);
+            }
+
+            data.push(["PAGO TOTAL", "", "", "", "", "", "", "", `$${totalLiquido.toFixed(2)}`]);
 
             doc.autoTable({
                 head: headers,
                 body: data,
-                startY: 40,
+                startY: 36,
                 theme: 'striped',
-                styles: { fontSize: 10, cellPadding: 3, valign: 'middle', halign: 'center' },
+                styles: { fontSize: 9, cellPadding: 2, valign: 'middle', halign: 'center' },
                 columnStyles: {
                     0: { halign: 'left', fontStyle: 'bold' },
-                    5: { textColor: [200, 0, 0] },
-                    7: { textColor: [0, 100, 0] },
-                    8: { fontStyle: 'bold', fillColor: [240, 240, 240] }
+                    5: { textColor: [200, 0, 0] }, 
+                    6: { fontStyle: 'bold', textColor: [0, 80, 200] },
+                    7: { textColor: [0, 100, 0] }, 
+                    8: { fontStyle: 'bold' }
                 },
                 didParseCell: function (data) {
-                    if (data.row.index === registros.length) {
-                        data.cell.styles.fontStyle = 'bold';
+                    const rowCount = data.table.body.length;
+                    if (data.row.index === rowCount - 1) { // Fila Total Final
                         data.cell.styles.fillColor = [50, 50, 50];
                         data.cell.styles.textColor = [255, 255, 255];
+                        data.cell.styles.fontStyle = 'bold';
                     }
                 }
             });
 
-            // FIRMA
-            let finalY = doc.lastAutoTable.finalY + 35;
-            if (finalY > 180) { doc.addPage(); finalY = 50; }
+            // --- LÓGICA DE FIRMA COMPACTA ---
+            // Reducimos el espacio vertical a solo 15mm (antes 35)
+            let finalY = doc.lastAutoTable.finalY + 15;
+            
+            // Si nos pasamos de 190mm (Letter mide 216mm), pasamos a otra hoja
+            if (finalY > 190) { 
+                doc.addPage(); 
+                finalY = 40; 
+            }
+            
             const pageWidth = doc.internal.pageSize.getWidth();
             doc.setLineWidth(0.5);
-            doc.line(pageWidth / 2 - 40, finalY, pageWidth / 2 + 40, finalY);
             
-            doc.setFontSize(11);
+            // Línea más corta (60mm de ancho total)
+            doc.line(pageWidth / 2 - 30, finalY, pageWidth / 2 + 30, finalY);
+            
+            // Texto más pequeño
+            doc.setFontSize(10);
             doc.setTextColor(0);
-            doc.text(nombre.toUpperCase(), pageWidth / 2, finalY + 6, { align: 'center' });
-            doc.text("Firma del Trabajador", pageWidth / 2, finalY + 12, { align: 'center' });
+            doc.text(nombre.toUpperCase(), pageWidth / 2, finalY + 5, { align: 'center' });
+            
+            doc.setFontSize(8);
+            doc.text("Firma del Trabajador", pageWidth / 2, finalY + 10, { align: 'center' });
 
             doc.save(`Nomina_${nombre.replace(/\s+/g, '_')}.pdf`);
         }
         
-        // Inicializar
         document.getElementById('inputFecha').valueAsDate = new Date();
-        detectarSabado(); // Chequear fecha inicial
+        detectarSabado();
     </script>
 </body>
 </html>
