@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nómina Final - Compacta</title>
+    <title>Nómina Final - Ajuste Horario</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
@@ -109,10 +109,15 @@
             </table>
         </div>
 
-        <div class="text-right">
+        <div class="flex flex-col md:flex-row justify-end gap-4">
+            <button type="button" onclick="generarPDFSimple()" class="bg-gray-600 text-white px-6 py-3 rounded shadow hover:bg-gray-700 font-bold inline-flex items-center gap-2 cursor-pointer transition hover:scale-105">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                PDF Simple (Horas Estándar)
+            </button>
+
             <button type="button" onclick="generarPDF()" class="bg-red-600 text-white px-6 py-3 rounded shadow hover:bg-red-700 font-bold inline-flex items-center gap-2 cursor-pointer transition hover:scale-105">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                Imprimir PDF (Carta)
+                PDF Completo (Horas Reales)
             </button>
         </div>
     </div>
@@ -120,13 +125,11 @@
     <script>
         let registros = [];
         
-        // --- CONSTANTES ---
         const AM_INICIO = 7 * 60;   
         const AM_FIN    = 12 * 60;  
         const PM_INICIO = 13 * 60;  
         const PM_FIN    = 16 * 60;  
 
-        // --- UTILIDADES ---
         function timeToMinutes(timeStr) {
             if(!timeStr) return 0;
             const [h, m] = timeStr.split(':').map(Number);
@@ -173,7 +176,6 @@
             }
         }
 
-        // --- LÓGICA PRINCIPAL ---
         function agregarFila() {
             const elFecha = document.getElementById('inputFecha').value;
             const elEntrada = document.getElementById('inputEntrada').value;
@@ -239,6 +241,9 @@
                 nombreDia,
                 fechaRaw: elFecha,
                 fechaFmt: formatDateFull(elFecha),
+                // GUARDAMOS EL TIEMPO RAW PARA USARLO LUEGO EN LA LÓGICA DEL PDF SIMPLE
+                entradaRaw: minEntrada,
+                salidaRaw: minSalida,
                 entrada12: minutesTo12Hour(minEntrada),
                 salida12: minutesTo12Hour(minSalida),
                 sueldoBase,
@@ -300,7 +305,7 @@
                 tbody.appendChild(tr);
             });
 
-            // CÁLCULOS FINALES
+            // TOTALES
             const adelanto = parseFloat(document.getElementById('inputAdelanto').value) || 0;
             const granTotalLiquido = sumaSubtotal - adelanto;
 
@@ -320,6 +325,9 @@
             document.getElementById('granTotal').innerText = `$${granTotalLiquido.toFixed(2)}`;
         }
 
+        // ==========================================
+        //  PDF COMPLETO (REAL)
+        // ==========================================
         async function generarPDF() {
             if (registros.length === 0) { alert("No hay datos"); return; }
             
@@ -329,11 +337,10 @@
             const fechaGeneracion = new Date().toLocaleString('es-ES');
 
             const { jsPDF } = window.jspdf;
-            // TAMAÑO CARTA (LETTER)
-            const doc = new jsPDF('l', 'mm', 'letter'); // Altura ~216mm
+            const doc = new jsPDF('l', 'mm', 'letter');
 
             doc.setFontSize(14);
-            doc.text("REPORTE DE TRABAJO", 14, 15);
+            doc.text("REPORTE DE TRABAJO (COMPLETO)", 14, 15);
             doc.setFontSize(9);
             doc.setTextColor(100);
             doc.text(`Generado: ${fechaGeneracion}`, 260, 15, { align: 'right' });
@@ -358,7 +365,6 @@
                 `$${r.subtotal.toFixed(2)}`
             ]);
 
-            // TOTALES
             const sumBase = registros.reduce((a, b) => a + b.sueldoBase, 0);
             const sumDesc = registros.reduce((a, b) => a + b.dineroDescontado, 0);
             const sumHorasExt = registros.reduce((a, b) => a + parseFloat(b.horasExtra), 0); 
@@ -380,7 +386,7 @@
                 data.push(["MENOS ADELANTO", "", "", "", "", "", "", "", `-$${adelanto.toFixed(2)}`]);
             }
 
-            data.push(["PAGO TOTAL", "", "", "", "", "", "", "", `$${totalLiquido.toFixed(2)}`]);
+            data.push(["TOTAL LÍQUIDO", "", "", "", "", "", "", "", `$${totalLiquido.toFixed(2)}`]);
 
             doc.autoTable({
                 head: headers,
@@ -397,7 +403,7 @@
                 },
                 didParseCell: function (data) {
                     const rowCount = data.table.body.length;
-                    if (data.row.index === rowCount - 1) { // Fila Total Final
+                    if (data.row.index === rowCount - 1) { 
                         data.cell.styles.fillColor = [50, 50, 50];
                         data.cell.styles.textColor = [255, 255, 255];
                         data.cell.styles.fontStyle = 'bold';
@@ -405,23 +411,126 @@
                 }
             });
 
-            // --- LÓGICA DE FIRMA COMPACTA ---
-            // Reducimos el espacio vertical a solo 15mm (antes 35)
-            let finalY = doc.lastAutoTable.finalY + 15;
+            printSignature(doc, nombre, true);
+        }
+
+        // ==========================================
+        //  PDF SIMPLE (HORAS MAQUILLADAS 7-4)
+        // ==========================================
+        async function generarPDFSimple() {
+            if (registros.length === 0) { alert("No hay datos"); return; }
             
-            // Si nos pasamos de 190mm (Letter mide 216mm), pasamos a otra hoja
-            if (finalY > 190) { 
-                doc.addPage(); 
-                finalY = 40; 
+            const nombre = document.getElementById('inputNombre').value || "TRABAJADOR";
+            const adelanto = parseFloat(document.getElementById('inputAdelanto').value) || 0;
+            const fechaGeneracion = new Date().toLocaleString('es-ES');
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'letter');
+
+            doc.setFontSize(14);
+            doc.text("REPORTE", 14, 15);
+            doc.setFontSize(9);
+            doc.setTextColor(100);
+            doc.text(`Generado: ${fechaGeneracion}`, 260, 15, { align: 'right' });
+            
+            doc.setTextColor(0);
+            doc.text(`Trabajador: ${nombre.toUpperCase()}`, 14, 23);
+            doc.setFontSize(8);
+            doc.text("Lunes-Viernes (7am-4pm) | Sábados (7am-12pm)", 14, 28);
+
+            const headers = [["Día / Fecha", "Entrada", "Salida", "Sueldo Base", "H.Perdidas", "Descuento", "Total Día"]];
+            
+            // LÓGICA DE MAQUILLAJE DE HORAS
+            const data = registros.map(r => {
+                const esSabado = (r.nombreDia === "Sábado");
+                const limiteEntrada = AM_INICIO; // 7:00 AM (420)
+                const limiteSalida = esSabado ? (12 * 60) : PM_FIN; // 12:00 PM o 4:00 PM
+                
+                // 1. ENTRADA VISUAL
+                // Si llegó antes (ej 5am), mostramos 7:00 AM.
+                // Si llegó tarde (ej 8am), mostramos 8:00 AM (para justificar descuento).
+                let visualEntrada = "";
+                if (r.entradaRaw <= limiteEntrada) {
+                    visualEntrada = "07:00 AM";
+                } else {
+                    visualEntrada = r.entrada12; // Muestra la real (tardía)
+                }
+
+                // 2. SALIDA VISUAL
+                // Si salió después (ej 6pm), mostramos 4:00 PM (o 12pm Sabado).
+                // Si salió antes (ej 3pm), mostramos 3:00 PM (para justificar descuento).
+                let visualSalida = "";
+                if (r.salidaRaw >= limiteSalida) {
+                    visualSalida = esSabado ? "12:00 PM" : "04:00 PM";
+                } else {
+                    visualSalida = r.salida12; // Muestra la real (temprana)
+                }
+
+                const totalDiaSimple = r.sueldoBase - r.dineroDescontado;
+
+                return [
+                    `${r.nombreDia}\n${r.fechaFmt}`,
+                    visualEntrada, // Hora maquillada
+                    visualSalida,  // Hora maquillada
+                    `$${r.sueldoBase.toFixed(2)}`,
+                    r.horasPerdidas > 0 ? `${r.horasPerdidas}h` : "-",
+                    r.dineroDescontado > 0 ? `-$${r.dineroDescontado.toFixed(2)}` : "-",
+                    `$${totalDiaSimple.toFixed(2)}`
+                ];
+            });
+
+            // TOTALES SIMPLES
+            const sumBase = registros.reduce((a, b) => a + b.sueldoBase, 0);
+            const sumDesc = registros.reduce((a, b) => a + b.dineroDescontado, 0);
+            const sumSubtotalSimple = sumBase - sumDesc;
+            const totalLiquidoSimple = sumSubtotalSimple - adelanto;
+
+            data.push([
+                "TOTALES", "", "", 
+                `$${sumBase.toFixed(2)}`, 
+                "", 
+                `-$${sumDesc.toFixed(2)}`, 
+                `$${sumSubtotalSimple.toFixed(2)}`
+            ]);
+
+            if (adelanto > 0) {
+                data.push(["MENOS ADELANTO", "", "", "", "", "", `-$${adelanto.toFixed(2)}`]);
             }
+
+            data.push(["TOTAL A PAGAR", "", "", "", "", "", `$${totalLiquidoSimple.toFixed(2)}`]);
+
+            doc.autoTable({
+                head: headers,
+                body: data,
+                startY: 32,
+                theme: 'striped',
+                styles: { fontSize: 10, cellPadding: 3, valign: 'middle', halign: 'center' },
+                columnStyles: {
+                    0: { halign: 'left', fontStyle: 'bold' },
+                    5: { textColor: [200, 0, 0] },
+                    6: { fontStyle: 'bold' }
+                },
+                didParseCell: function (data) {
+                    const rowCount = data.table.body.length;
+                    if (data.row.index === rowCount - 1) { 
+                        data.cell.styles.fillColor = [100, 100, 100]; 
+                        data.cell.styles.textColor = [255, 255, 255];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+            });
+
+            printSignature(doc, nombre, false);
+        }
+
+        function printSignature(doc, nombre, esCompleto) {
+            let finalY = doc.lastAutoTable.finalY + 15;
+            if (finalY > 190) { doc.addPage(); finalY = 40; }
             
             const pageWidth = doc.internal.pageSize.getWidth();
             doc.setLineWidth(0.5);
-            
-            // Línea más corta (60mm de ancho total)
             doc.line(pageWidth / 2 - 30, finalY, pageWidth / 2 + 30, finalY);
             
-            // Texto más pequeño
             doc.setFontSize(10);
             doc.setTextColor(0);
             doc.text(nombre.toUpperCase(), pageWidth / 2, finalY + 5, { align: 'center' });
@@ -429,7 +538,8 @@
             doc.setFontSize(8);
             doc.text("Firma del Trabajador", pageWidth / 2, finalY + 10, { align: 'center' });
 
-            doc.save(`Nomina_${nombre.replace(/\s+/g, '_')}.pdf`);
+            const sufijo = esCompleto ? "_Completo" : "_Simple";
+            doc.save(`Nomina_${nombre.replace(/\s+/g, '_')}${sufijo}.pdf`);
         }
         
         document.getElementById('inputFecha').valueAsDate = new Date();
